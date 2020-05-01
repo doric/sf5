@@ -14,3 +14,8 @@
 .phpunit.result.cache
 /phpunit.xml
 ###< symfony/phpunit-bridge ###
+
+### phpstorm files ###
+.idea
+.mariadb-data
+.idea/symfony2.xml

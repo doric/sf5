@@ -1,0 +1,70 @@
+version: "2.4"
+services:
+  site_sf5:
+    container_name: site_sf5
+    build: ./docker/apache
+    ports:
+      - '8080:80'
+    working_dir: /var/www/sf5
+    depends_on:
+      - database
+    tty: true
+    environment:
+      - COMPOSER_PROCESS_TIMEOUT=1200
+      - SUFFIX="_sf5"
+      - APACHE_RUN_USER=www-data
+      - APACHE_RUN_GROUP=www-data
+      - APACHE_PID_FILE=/var/run/apache2/apache2$SUFFIX.pid
+      - APACHE_RUN_DIR=/var/run/apache2$SUFFIX
+      - APACHE_LOCK_DIR=/var/lock/apache2$SUFFIX
+        # Only /var/log/apache2 is handled by /etc/logrotate.d/apache2.
+      - APACHE_LOG_DIR=/var/log/apache2$SUFFIX
+    volumes:
+      - ./:/var/www/sf5:cached
+      - ./build/cache:/root/.cache/:cached
+    networks:
+      - sf5_network
+
+  database:
+    image: mariadb:10.4
+    container_name: sf5_db
+    restart: always
+    ports: ['3309:3306']
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - ./.mariadb-data:/var/lib/mysql
+    networks:
+      - sf5_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: sf5_phpmyadmin
+    depends_on:
+      - database
+    environment:
+      PMA_PORT: 3309
+      MYSQL_USERNAME: root
+      MYSQL_ROOT_PASSWORD: root
+    restart: always
+    ports:
+      - "8083:80"
+    networks:
+      - sf5_network
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog_sf5
+    command: ["-smtp-bind-addr", "0.0.0.0:25"]
+    networks:
+      - sf5_network
+    user: root
+    expose:
+      - 25
+      - 8025
+    ports:
+      - 8025:8025
+    healthcheck:
+      test: echo | telnet 127.0.0.1 25
+networks:
+  sf5_network:
+    name: sf5_network
